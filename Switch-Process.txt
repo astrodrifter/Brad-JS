@@ -1,0 +1,18 @@
+sdn.switchProcess = function()
+{
+	var intakeType = Xrm.Page.getAttribute("sdn_intaketype").getValue();
+	if(intakeType == 749150000)
+	{
+		Xrm.Page.data.process.setActiveProcess('51E938A4-1538-487E-B825-874492D77379', sdn.switchProcessEnd);
+	}
+	else 
+	{
+		Xrm.Page.data.process.setActiveProcess('A021F651-DF70-46C0-82EF-D09ED19B4C4A', sdn.switchProcessEnd);
+	}
+
+}
+
+sdn.switchProcessEnd = function()
+{
+	//Do something
+}

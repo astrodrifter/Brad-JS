@@ -1,0 +1,23 @@
+sdn.addNote = function()
+{
+		var entityId = Xrm.Page.data.entity.getId();
+		var emialName =  Xrm.Page.getAttribute("subject").getValue();
+		
+		var extraqs = "sdn_emailid=" + entityId + "";
+		extraqs += "&sdn_emailidname=" + emialName + "";
+		
+		//Set features for how the window will appear.
+		var features = "height=800,width=700,location=no,menubar=no,status=no,toolbar=no";
+		// Open the window.
+		window.open("/main.aspx?etn=sdn_notes&pagetype=entityrecord&extraqs=" +
+			encodeURIComponent(extraqs), "_blank", features, false);
+		
+}
+
+sdn.showNoteButton = function()
+{
+	if(Xrm.Page.getAttribute("sdn_noteid").getValue() != null)// A Note already exists
+		return false; // Hide button
+	else
+		return true; //Show button
+}

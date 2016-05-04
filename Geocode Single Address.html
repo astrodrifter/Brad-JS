@@ -1,0 +1,194 @@
+﻿<!DOCTYPE html> 
+<html>   
+    <head>     
+       <meta name="viewport" content="initial-scale=1.0, user-scalable=no" /> 
+        <style type="text/css">       
+            html { height: 100% }       
+            body { height: 100%; margin: 0; padding: 0 }       
+            #map_canvas { height: 100% }     
+        </style>     
+        <script type="text/javascript"       
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDQaC0XDhvB_dlMvXDsdbjRaf2HFEzb86k&sensor=false">                    
+        </script> 
+        <script type="text/javascript"
+            src="ClientGlobalContext.js.aspx">
+        </script>
+        <script type="text/javascript"       
+            src="sdn_SDK.REST">     
+        </script>   
+        <script type="text/javascript"       
+            src="sdn_GLOBAL_JSON">     
+        </script>  
+        <script type="text/javascript"       
+            src="sdn_GLOBAL_JQUERY_1.72">     
+        </script> 
+      
+        <script type="text/javascript">
+
+            var geocoder;
+			var directionsService;
+			var directionsDisplay;
+            var map;
+			var contactName;
+            var bounds = new google.maps.LatLngBounds(); //Set Boundry For Map
+            var address; 
+			var officeAddress;
+			var distance;
+			var distanceText;
+			var image = "sdn_Icon_Pushpin_Yellow"
+            var entityType = window.parent.Xrm.Page.context.getQueryStringParameters().etc
+			
+			if(entityType == 1) //Account
+			{
+				contactName = window.parent.Xrm.Page.getAttribute('name').getValue();
+				address = window.parent.Xrm.Page.getAttribute('address1_name').getValue(); //Account Address
+				image = "sdn_MapMarker_CommunityCentre"
+			}
+			else if(entityType == 10011) //Contact Child 
+			{
+				contactName = window.parent.Xrm.Page.getAttribute('sdn_contact').getValue()[0].name;
+				address = window.parent.Xrm.Page.getAttribute('sdn_address1_name').getValue(); //Contact Address
+				officeAddress = window.parent.Xrm.Page.getAttribute('sdn_officeaddress_name').getValue(); //Office Address
+				image = "sdn_MapMarker_Child"
+			}
+			else if(entityType == 10010) //Contact Carer
+			{
+				contactName = window.parent.Xrm.Page.getAttribute('sdn_contact').getValue()[0].name;
+				address = window.parent.Xrm.Page.getAttribute('sdn_address1_name').getValue() ;
+				image = "sdn_MapMarker_Carer"
+			}
+			else if(entityType == 10040) //Travel Book
+			{
+				address = window.parent.Xrm.Page.getAttribute('sdn_startlocation').getValue() ;
+				var image = "sdn_Icon_Pushpin_Yellow"
+			}
+			else if(entityType == 4201) //Appointment
+			{
+				address = window.parent.Xrm.Page.getAttribute('location').getValue() ;
+				var image = "sdn_Icon_Pushpin_Yellow"
+			}
+			
+            function initialize() {
+
+                if (address != null) {
+                    geocoder = new google.maps.Geocoder();
+					directionsService = new google.maps.DirectionsService;
+					directionsDisplay = new google.maps.DirectionsRenderer;
+                    var latlng = new google.maps.LatLng(-32.3456, 141.4346); //Centered On Australia
+                    var mapOptions = { zoom: 16, center: latlng, mapTypeId: google.maps.MapTypeId.ROADMAP }
+
+                    map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
+
+                    var DivContainer =
+                        "<div id='outsideContainer'>" +
+                        "<div id='insideContainer1'>" + contactName + "</div>" +
+                        "<div id='insideContainer2'>" + address + "</div>" +
+                        "<div id='streetViewContainer' style='width:400px; height:300px'></div>" +
+                        "</div>";
+
+                    geocoder.geocode({ 'address': address }, function (results, status) {
+						if (status == google.maps.GeocoderStatus.OK) {
+							var latlong = results[0].geometry.location; //Get Location of Geocoded Address
+							var Lat = results[0].geometry.location.lat(); //Latitude in Dregrees
+							var Long = results[0].geometry.location.lng(); //Longitude in Degrees
+						
+						
+							map.setCenter(latlong); //Set Map Center to Geocoded Address
+							var marker = new google.maps.Marker({ map: map, position: latlong, title: contactName, animation: google.maps.Animation.DROP, icon: image, }); //Place Marker at Geocoded Address
+
+							var infowindow = new google.maps.InfoWindow({
+								content: DivContainer,
+								//position: map.getCenter()
+								position: marker.getPosition()
+							}); //Create New Infowindow
+
+							//infowindow.setContent("<b>" + AccName + "</b>"); //Set Contents of InfoWindow
+							google.maps.event.addListener(infowindow, 'domready', function () {
+								var panorama =
+									new google.maps.StreetViewPanorama(
+										document.getElementById("streetViewContainer"));
+								panorama.setPosition(infowindow.getPosition());
+							});
+
+							google.maps.event.addListener(marker, "click", function () { infowindow.open(map, marker); });
+
+							if(officeAddress != null) //Get Directions to office
+							{
+								calculateAndDisplayRoute(directionsService, directionsDisplay, address, officeAddress) 
+							}
+							
+							var Lat = results[0].geometry.location.lat(); //Latitude in Dregrees
+							var Long = results[0].geometry.location.lng(); //Longitude in Degrees
+							
+							if(entityType == 1)
+							{
+								window.parent.Xrm.Page.getAttribute("address1_latitude").setValue(Lat);
+								window.parent.Xrm.Page.getAttribute("address1_latitude").setSubmitMode("always"); 	
+								window.parent.Xrm.Page.getAttribute("address1_longitude").setValue(Long);
+								window.parent.Xrm.Page.getAttribute("address1_longitude").setSubmitMode("always");	
+							}
+							else if(entityType == 10040)//Travel Book
+							{
+								window.parent.Xrm.Page.getAttribute("sdn_startlocationlat").setValue(Lat);
+								window.parent.Xrm.Page.getAttribute("sdn_startlocationlat").setSubmitMode("always"); 	
+								window.parent.Xrm.Page.getAttribute("sdn_startlocationlong").setValue(Long);
+								window.parent.Xrm.Page.getAttribute("sdn_startlocationlong").setSubmitMode("always"); 	
+							}	
+							else if(entityType == 4201)//Appointment
+							{
+								window.parent.Xrm.Page.getAttribute("sdn_location_lat").setValue(Lat);
+								window.parent.Xrm.Page.getAttribute("sdn_location_lat").setSubmitMode("always"); 	
+								window.parent.Xrm.Page.getAttribute("sdn_location_long").setValue(Long);
+								window.parent.Xrm.Page.getAttribute("sdn_location_long").setSubmitMode("always"); 	
+							}	
+							else if(entityType == 10011 || entityType == 10010)
+							{
+								window.parent.Xrm.Page.getAttribute("sdn_address1_latitude").setValue(Lat);
+								window.parent.Xrm.Page.getAttribute("sdn_address1_latitude").setSubmitMode("always"); 	
+								window.parent.Xrm.Page.getAttribute("sdn_address1_longitude").setValue(Long);
+								window.parent.Xrm.Page.getAttribute("sdn_address1_longitude").setSubmitMode("always"); 	
+							}	
+							
+						}
+						else
+						{
+							alert("Geocode was not successful for" + contactName + ": " + "Location Data Not Available");
+						}
+                    });
+                }
+            }
+            
+			function calculateAndDisplayRoute(directionsService, directionsDisplay, address, officeAddress) 
+			{
+				directionsService.route({
+					origin: address,
+					destination: officeAddress,
+					travelMode: google.maps.TravelMode.DRIVING
+				}, function(response, status) 
+				{
+					if (status === google.maps.DirectionsStatus.OK) 
+					{
+						distance = response.routes[0].legs[0].distance.value; //Distance in Metres
+						distanceText = response.routes[0].legs[0].distance.text;	
+						durationText = response.routes[0].legs[0].duration.text;
+						
+						window.parent.Xrm.Page.getAttribute("sdn_distancefromoffice").setValue(distance / 1000);
+						window.parent.Xrm.Page.getAttribute("sdn_distancefromoffice").setSubmitMode("always"); 	
+						//directionsDisplay.setDirections(response);
+					} 
+					else 
+					{
+						alert('Directions request failed due to ' + status);
+					}
+				});
+			}
+                     
+        </script>   
+    </head>   
+    <body onload="initialize();">     
+        <div id="map_canvas" style="width:100%; height:100%">
+        </div>                
+    </body> 
+</html>
+
+ 
